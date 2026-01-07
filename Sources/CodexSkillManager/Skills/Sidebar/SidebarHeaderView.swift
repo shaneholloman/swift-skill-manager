@@ -7,14 +7,13 @@ struct SidebarHeaderView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Spacer()
                 Picker("Source", selection: $source) {
                     ForEach(SkillSource.allCases) { source in
                         Text(source.rawValue).tag(source)
                     }
                 }
                 .pickerStyle(.segmented)
-                Spacer()
+                .padding(.trailing, 8)
             }
 
             VStack(alignment: .leading, spacing: 2) {
