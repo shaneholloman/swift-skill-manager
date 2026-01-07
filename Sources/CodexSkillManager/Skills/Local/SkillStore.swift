@@ -40,55 +40,13 @@ import Observation
         listState = .loading
         detailState = .idle
         referenceState = .idle
-
-        let baseURL = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".codex/skills/public")
-
         do {
-            let items = try FileManager.default.contentsOfDirectory(
-                at: baseURL,
-                includingPropertiesForKeys: [.isDirectoryKey],
-                options: [.skipsHiddenFiles]
-            )
-
-            let skills = items.compactMap { url -> Skill? in
-                let values = try? url.resourceValues(forKeys: [.isDirectoryKey])
-                guard values?.isDirectory == true else { return nil }
-
-                let name = url.lastPathComponent
-                let skillFileURL = url.appendingPathComponent("SKILL.md")
-                let hasSkillFile = FileManager.default.fileExists(atPath: skillFileURL.path)
-
-                guard hasSkillFile else { return nil }
-
-                let markdown = (try? String(contentsOf: skillFileURL, encoding: .utf8)) ?? ""
-                let metadata = parseMetadata(from: markdown)
-
-                let references = referenceFiles(in: url.appendingPathComponent("references"))
-                let referencesCount = references.count
-                let assetsCount = countEntries(in: url.appendingPathComponent("assets"))
-                let scriptsCount = countEntries(in: url.appendingPathComponent("scripts"))
-                let templatesCount = countEntries(in: url.appendingPathComponent("templates"))
-
-                return Skill(
-                    id: name,
-                    name: name,
-                    displayName: formatTitle(metadata.name ?? name),
-                    description: metadata.description ?? "No description available.",
-                    folderURL: url,
-                    skillMarkdownURL: skillFileURL,
-                    references: references,
-                    stats: SkillStats(
-                        references: referencesCount,
-                        assets: assetsCount,
-                        scripts: scriptsCount,
-                        templates: templatesCount
-                    )
-                )
+            let skills = try SkillPlatform.allCases.flatMap { platform in
+                try loadSkills(from: platform.rootURL, platform: platform)
             }
 
             self.skills = skills.sorted {
-                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
             }
 
             listState = .loaded
@@ -169,7 +127,23 @@ import Observation
         skills.contains { $0.name == slug }
     }
 
-    func installRemoteSkill(_ skill: RemoteSkill, client: RemoteSkillClient) async throws {
+    func isInstalled(slug: String, in platform: SkillPlatform) -> Bool {
+        skills.contains { $0.name == slug && $0.platform == platform }
+    }
+
+    func installedPlatforms(for slug: String) -> Set<SkillPlatform> {
+        Set(skills.filter { $0.name == slug }.map(\.platform))
+    }
+
+    func installRemoteSkill(
+        _ skill: RemoteSkill,
+        client: RemoteSkillClient,
+        destinations: Set<SkillPlatform>
+    ) async throws {
+        guard !destinations.isEmpty else {
+            throw NSError(domain: "RemoteSkill", code: 3)
+        }
+
         let fileManager = FileManager.default
         let zipURL = try await client.download(skill.slug, skill.latestVersion)
 
@@ -187,19 +161,21 @@ import Observation
             throw NSError(domain: "RemoteSkill", code: 1)
         }
 
-        let destinationRoot = fileManager.homeDirectoryForCurrentUser
-            .appendingPathComponent(".codex/skills/public")
-        try fileManager.createDirectory(at: destinationRoot, withIntermediateDirectories: true)
+        for platform in destinations {
+            let destinationRoot = platform.rootURL
+            try fileManager.createDirectory(at: destinationRoot, withIntermediateDirectories: true)
 
-        let finalURL = destinationRoot.appendingPathComponent(skill.slug)
-        if fileManager.fileExists(atPath: finalURL.path) {
-            try fileManager.removeItem(at: finalURL)
+            let finalURL = destinationRoot.appendingPathComponent(skill.slug)
+            if fileManager.fileExists(atPath: finalURL.path) {
+                try fileManager.removeItem(at: finalURL)
+            }
+            try fileManager.copyItem(at: skillRoot, to: finalURL)
         }
 
-        try fileManager.copyItem(at: skillRoot, to: finalURL)
-
         await loadSkills()
-        selectedSkillID = skill.slug
+        if let platform = destinations.first {
+            selectedSkillID = "\(platform.storageKey)-\(skill.slug)"
+        }
     }
 
     private func unzip(_ url: URL, to destination: URL) throws {
@@ -240,5 +216,55 @@ import Observation
         }
 
         return nil
+    }
+
+    private func loadSkills(from baseURL: URL, platform: SkillPlatform) throws -> [Skill] {
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: baseURL.path) else {
+            return []
+        }
+
+        let items = try fileManager.contentsOfDirectory(
+            at: baseURL,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        )
+
+        return items.compactMap { url -> Skill? in
+            let values = try? url.resourceValues(forKeys: [.isDirectoryKey])
+            guard values?.isDirectory == true else { return nil }
+
+            let name = url.lastPathComponent
+            let skillFileURL = url.appendingPathComponent("SKILL.md")
+            let hasSkillFile = fileManager.fileExists(atPath: skillFileURL.path)
+
+            guard hasSkillFile else { return nil }
+
+            let markdown = (try? String(contentsOf: skillFileURL, encoding: .utf8)) ?? ""
+            let metadata = parseMetadata(from: markdown)
+
+            let references = referenceFiles(in: url.appendingPathComponent("references"))
+            let referencesCount = references.count
+            let assetsCount = countEntries(in: url.appendingPathComponent("assets"))
+            let scriptsCount = countEntries(in: url.appendingPathComponent("scripts"))
+            let templatesCount = countEntries(in: url.appendingPathComponent("templates"))
+
+            return Skill(
+                id: "\(platform.storageKey)-\(name)",
+                name: name,
+                displayName: formatTitle(metadata.name ?? name),
+                description: metadata.description ?? "No description available.",
+                platform: platform,
+                folderURL: url,
+                skillMarkdownURL: skillFileURL,
+                references: references,
+                stats: SkillStats(
+                    references: referencesCount,
+                    assets: assetsCount,
+                    scripts: scriptsCount,
+                    templates: templatesCount
+                )
+            )
+        }
     }
 }

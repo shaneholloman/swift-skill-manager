@@ -17,6 +17,7 @@ struct ImportSkillView: View {
     @State private var candidate: ImportCandidate?
     @State private var status: Status = .idle
     @State private var errorMessage: String = ""
+    @State private var installTargets: Set<SkillPlatform> = [.codex]
 
     private enum Status {
         case idle
@@ -52,7 +53,7 @@ struct ImportSkillView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Import Skill")
                 .font(.title.bold())
-            Text("Choose a skill folder or zip file to add it to your Codex skills.")
+            Text("Choose a skill folder or zip file, then pick where to install it.")
                 .foregroundStyle(.secondary)
         }
     }
@@ -99,7 +100,7 @@ struct ImportSkillView: View {
         ContentUnavailableView(
             "Imported",
             systemImage: "checkmark.seal",
-            description: Text("The skill was added to your Codex skills folder.")
+            description: Text("The skill was added to your selected skills folders.")
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -119,6 +120,10 @@ struct ImportSkillView: View {
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     }
+                    InstallTargetSelectionView(
+                        installedTargets: [],
+                        selection: $installTargets
+                    )
                     Markdown(candidate.markdown)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -148,7 +153,7 @@ struct ImportSkillView: View {
                 Task { await importCandidate() }
             }
             .buttonStyle(.borderedProminent)
-            .disabled(status != .valid)
+            .disabled(status != .valid || installTargets.isEmpty)
             .keyboardShortcut(.defaultAction)
         }
     }
@@ -235,25 +240,28 @@ struct ImportSkillView: View {
 
     private func importCandidate() async {
         guard let candidate else { return }
+        guard !installTargets.isEmpty else { return }
         status = .importing
 
-        let destinationRoot = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".codex/skills/public")
-
-        let finalURL = uniqueDestinationURL(
-            base: destinationRoot.appendingPathComponent(candidate.rootURL.lastPathComponent)
-        )
-
         do {
-            try FileManager.default.createDirectory(at: destinationRoot, withIntermediateDirectories: true)
-            if FileManager.default.fileExists(atPath: finalURL.path) {
-                try FileManager.default.removeItem(at: finalURL)
-            }
+            let fileManager = FileManager.default
+            let shouldMove = candidate.temporaryRoot == nil && installTargets.count == 1
 
-            if candidate.temporaryRoot != nil {
-                try FileManager.default.copyItem(at: candidate.rootURL, to: finalURL)
-            } else {
-                try FileManager.default.moveItem(at: candidate.rootURL, to: finalURL)
+            for platform in installTargets {
+                let destinationRoot = platform.rootURL
+                try fileManager.createDirectory(at: destinationRoot, withIntermediateDirectories: true)
+                let finalURL = uniqueDestinationURL(
+                    base: destinationRoot.appendingPathComponent(candidate.rootURL.lastPathComponent)
+                )
+                if fileManager.fileExists(atPath: finalURL.path) {
+                    try fileManager.removeItem(at: finalURL)
+                }
+
+                if shouldMove {
+                    try fileManager.moveItem(at: candidate.rootURL, to: finalURL)
+                } else {
+                    try fileManager.copyItem(at: candidate.rootURL, to: finalURL)
+                }
             }
 
             await store.loadSkills()

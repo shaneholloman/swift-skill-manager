@@ -2,7 +2,7 @@ import SwiftUI
 
 struct RemoteSkillRowView: View {
     let skill: RemoteSkill
-    let isInstalled: Bool
+    let installedTargets: Set<SkillPlatform>
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -22,8 +22,10 @@ struct RemoteSkillRowView: View {
                     TagView(text: "v\(version)")
                 }
 
-                if isInstalled {
-                    TagView(text: "Installed", tint: .green)
+                ForEach(SkillPlatform.allCases) { platform in
+                    if installedTargets.contains(platform) {
+                        TagView(text: platform.rawValue, tint: .green)
+                    }
                 }
             }
         }

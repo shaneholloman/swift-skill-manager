@@ -11,6 +11,8 @@ struct SkillSplitView: View {
     @State private var downloadErrorMessage: String?
     @State private var isDownloadingRemote = false
     @State private var didDownloadRemote = false
+    @State private var showingInstallSheet = false
+    @State private var installTargets: Set<SkillPlatform> = [.codex]
     @State private var searchTask: Task<Void, Never>?
 
     private var filteredSkills: [Skill] {
@@ -19,6 +21,14 @@ struct SkillSplitView: View {
             skill.displayName.localizedCaseInsensitiveContains(searchText)
                 || skill.description.localizedCaseInsensitiveContains(searchText)
         }
+    }
+
+    private var filteredCodexSkills: [Skill] {
+        filteredSkills.filter { $0.platform == .codex }
+    }
+
+    private var filteredClaudeSkills: [Skill] {
+        filteredSkills.filter { $0.platform == .claude }
     }
 
     var body: some View {
@@ -36,6 +46,18 @@ struct SkillSplitView: View {
             .sheet(isPresented: $showingImport) {
                 ImportSkillView()
                     .environment(store)
+            }
+            .sheet(isPresented: $showingInstallSheet) {
+                if let skill = remoteStore.selectedSkill {
+                    RemoteInstallSheet(
+                        skill: skill,
+                        installedTargets: store.installedPlatforms(for: skill.slug),
+                        selection: $installTargets,
+                        isInstalling: isDownloadingRemote,
+                        onCancel: { showingInstallSheet = false },
+                        onInstall: { Task { await downloadSelectedRemote() } }
+                    )
+                }
             }
             .alert("Download failed", isPresented: downloadErrorBinding) {
                 Button("OK", role: .cancel) {}
@@ -59,13 +81,14 @@ struct SkillSplitView: View {
 
     private var listView: some View {
         SkillListView(
-            localSkills: filteredSkills,
+            localCodexSkills: filteredCodexSkills,
+            localClaudeSkills: filteredClaudeSkills,
             remoteLatestSkills: remoteStore.latestSkills,
             remoteSearchResults: remoteStore.searchResults,
             remoteSearchState: remoteStore.searchState,
             remoteLatestState: remoteStore.latestState,
             remoteQuery: searchText,
-            installedSlugs: Set(store.skills.map(\.name)),
+            installedPlatforms: installedPlatforms,
             source: $source,
             localSelection: localSelectionBinding,
             remoteSelection: remoteSelectionBinding
@@ -87,7 +110,7 @@ struct SkillSplitView: View {
         if source == .clawdhub {
             ToolbarItem(id: "download") {
                 Button {
-                    downloadSelectedRemote()
+                    presentRemoteInstallSheet()
                 } label: {
                     downloadLabel
                 }
@@ -122,7 +145,8 @@ struct SkillSplitView: View {
 
     private var canDownloadRemoteSkill: Bool {
         guard let skill = remoteStore.selectedSkill else { return false }
-        return !store.isInstalled(slug: skill.slug)
+        let installedTargets = store.installedPlatforms(for: skill.slug)
+        return installedTargets != Set(SkillPlatform.allCases)
     }
 
     private var localSelectionBinding: Binding<Skill.ID?> {
@@ -143,7 +167,9 @@ struct SkillSplitView: View {
     private var downloadLabel: some View {
         if isDownloadingRemote {
             ProgressView()
-        } else if didDownloadRemote || (remoteStore.selectedSkill.map { store.isInstalled(slug: $0.slug) } ?? false) {
+        } else if didDownloadRemote || (remoteStore.selectedSkill.map {
+            store.installedPlatforms(for: $0.slug) == Set(SkillPlatform.allCases)
+        } ?? false) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(.green)
         } else {
@@ -159,22 +185,32 @@ struct SkillSplitView: View {
         NSWorkspace.shared.open(url)
     }
 
-    private func downloadSelectedRemote() {
+    private func presentRemoteInstallSheet() {
         guard let skill = remoteStore.selectedSkill else { return }
+        installTargets = defaultInstallTargets(for: skill.slug)
+        showingInstallSheet = true
+    }
+
+    private func downloadSelectedRemote() async {
+        guard let skill = remoteStore.selectedSkill else { return }
+        guard !installTargets.isEmpty else { return }
         isDownloadingRemote = true
         didDownloadRemote = false
-        Task {
-            do {
-                try await store.installRemoteSkill(skill, client: remoteStore.client)
-                didDownloadRemote = true
-                try? await Task.sleep(for: .seconds(1.2))
-            } catch {
-                downloadErrorMessage = error.localizedDescription
-            }
-            isDownloadingRemote = false
-            if didDownloadRemote {
-                didDownloadRemote = false
-            }
+        do {
+            try await store.installRemoteSkill(
+                skill,
+                client: remoteStore.client,
+                destinations: installTargets
+            )
+            didDownloadRemote = true
+            showingInstallSheet = false
+            try? await Task.sleep(for: .seconds(1.2))
+        } catch {
+            downloadErrorMessage = error.localizedDescription
+        }
+        isDownloadingRemote = false
+        if didDownloadRemote {
+            didDownloadRemote = false
         }
     }
 
@@ -187,6 +223,64 @@ struct SkillSplitView: View {
                 }
             }
         )
+    }
+
+    private var installedPlatforms: [String: Set<SkillPlatform>] {
+        Dictionary(
+            grouping: store.skills,
+            by: { $0.name }
+        ).mapValues { Set($0.map(\.platform)) }
+    }
+
+    private func defaultInstallTargets(for slug: String) -> Set<SkillPlatform> {
+        let installed = store.installedPlatforms(for: slug)
+        let missing = Set(SkillPlatform.allCases).subtracting(installed)
+        return missing.isEmpty ? installed : missing
+    }
+}
+
+private struct RemoteInstallSheet: View {
+    let skill: RemoteSkill
+    let installedTargets: Set<SkillPlatform>
+    @Binding var selection: Set<SkillPlatform>
+    let isInstalling: Bool
+    let onCancel: () -> Void
+    let onInstall: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Install Skill")
+                    .font(.title.bold())
+                Text("Choose where to install \(skill.displayName).")
+                    .foregroundStyle(.secondary)
+            }
+
+            InstallTargetSelectionView(
+                installedTargets: installedTargets,
+                selection: $selection
+            )
+
+            Spacer()
+
+            HStack {
+                Button("Cancel") {
+                    onCancel()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button("Install") {
+                    onInstall()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(selection.isEmpty || isInstalling)
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(minWidth: 520, minHeight: 340)
     }
 }
 

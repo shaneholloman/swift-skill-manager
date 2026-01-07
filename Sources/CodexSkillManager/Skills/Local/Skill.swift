@@ -18,6 +18,7 @@ struct Skill: Identifiable, Hashable {
     let name: String
     let displayName: String
     let description: String
+    let platform: SkillPlatform
     let folderURL: URL
     let skillMarkdownURL: URL
     let references: [SkillReference]
@@ -27,6 +28,7 @@ struct Skill: Identifiable, Hashable {
 
     var tagLabels: [String] {
         var labels: [String] = []
+        labels.append(platform.rawValue)
         labels.append(label(for: stats.references, singular: "reference"))
         labels.append(label(for: stats.assets, singular: "asset"))
         labels.append(label(for: stats.scripts, singular: "script"))
