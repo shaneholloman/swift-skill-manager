@@ -22,6 +22,20 @@ Local packaging helpers live in `Scripts/`:
 - `Scripts/sign-and-notarize.sh`: sign + notarize for releases.
 - `Scripts/make_appcast.sh`: generate Sparkle appcast from a zip.
 
+## Release flow (commit → changelog → GitHub release)
+1) Update version: bump `MARKETING_VERSION` in `version.env`.
+2) Build: `swift build`.
+3) Commit + push:
+   - `git add -A`
+   - `git commit -m "feat: ..."` (or other Conventional Commit type)
+   - `git push`
+4) Write release notes (short, user-facing bullets) and save to a file, e.g. `/tmp/codexskillmanager-release-notes-<version>.md`.
+5) Notarize and package:
+   - `APP_STORE_CONNECT_API_KEY_P8="/path/to/key.p8" APP_STORE_CONNECT_KEY_ID="..." APP_STORE_CONNECT_ISSUER_ID="..." APP_IDENTITY="Developer ID Application: ..."`
+   - `./Scripts/sign-and-notarize.sh`
+6) Publish GitHub release (creates the tag):
+   - `gh release create v<version> CodexSkillManager-<version>.zip --title "Codex Skill Manager <version>" --notes-file /tmp/codexskillmanager-release-notes-<version>.md`
+
 ## Project layout
 - `Package.swift`: SwiftPM manifest for the executable target.
 - `Sources/CodexSkillManager/App/CodexSkillManagerApp.swift`: App entry point + dependency injection.
