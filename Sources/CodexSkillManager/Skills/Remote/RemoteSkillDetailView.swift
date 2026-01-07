@@ -70,11 +70,27 @@ struct RemoteSkillDetailView: View {
                     .font(.title3)
                     .foregroundStyle(.secondary)
             }
+            if let owner = ownerDisplayName {
+                Text("By \(owner)")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
             if let version = skill.latestVersion {
                 Text("Latest version \(version)")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    private var ownerDisplayName: String? {
+        guard let owner = store.detailOwner else { return nil }
+        if let displayName = owner.displayName, !displayName.isEmpty {
+            return displayName
+        }
+        if let handle = owner.handle, !handle.isEmpty {
+            return "@\(handle)"
+        }
+        return nil
     }
 }

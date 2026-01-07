@@ -4,6 +4,7 @@ struct RemoteSkillClient {
     var fetchLatest: (_ limit: Int) async throws -> [RemoteSkill]
     var search: (_ query: String, _ limit: Int) async throws -> [RemoteSkill]
     var download: (_ slug: String, _ version: String?) async throws -> URL
+    var fetchDetail: (_ slug: String) async throws -> RemoteSkillOwner?
 }
 
 extension RemoteSkillClient {
@@ -84,6 +85,28 @@ extension RemoteSkillClient {
                 let (downloadURL, response) = try await session.download(from: url)
                 try validate(response: response)
                 return downloadURL
+            },
+            fetchDetail: { slug in
+                var components = URLComponents(
+                    url: baseURL.appendingPathComponent("/api/skill"),
+                    resolvingAgainstBaseURL: false
+                )
+                components?.queryItems = [
+                    URLQueryItem(name: "slug", value: slug),
+                ]
+                guard let url = components?.url else {
+                    throw URLError(.badURL)
+                }
+
+                let (data, response) = try await session.data(from: url)
+                try validate(response: response)
+                let decoded = try JSONDecoder().decode(RemoteSkillAPI.SkillDetailResponse.self, from: data)
+                guard let owner = decoded.owner else { return nil }
+                return RemoteSkillOwner(
+                    handle: owner.handle,
+                    displayName: owner.displayName,
+                    imageURL: owner.image
+                )
             }
         )
     }

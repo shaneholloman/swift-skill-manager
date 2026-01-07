@@ -30,4 +30,14 @@ struct RemoteSkillAPI {
         let version: String?
         let updatedAt: TimeInterval?
     }
+
+    struct SkillDetailResponse: Decodable {
+        let owner: Owner?
+    }
+
+    struct Owner: Decodable {
+        let handle: String?
+        let displayName: String?
+        let image: String?
+    }
 }

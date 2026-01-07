@@ -8,3 +8,9 @@ struct RemoteSkill: Identifiable, Hashable {
     let latestVersion: String?
     let updatedAt: Date?
 }
+
+struct RemoteSkillOwner: Hashable {
+    let handle: String?
+    let displayName: String?
+    let imageURL: String?
+}

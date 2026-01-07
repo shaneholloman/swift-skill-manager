@@ -11,6 +11,7 @@ struct SkillSplitView: View {
     @State private var downloadErrorMessage: String?
     @State private var isDownloadingRemote = false
     @State private var didDownloadRemote = false
+    @State private var searchTask: Task<Void, Never>?
 
     private var filteredSkills: [Skill] {
         guard !searchText.isEmpty else { return store.skills }
@@ -25,7 +26,8 @@ struct SkillSplitView: View {
             .modifier(
                 SkillSplitLifecycleModifier(
                     source: $source,
-                    searchText: $searchText
+                    searchText: $searchText,
+                    searchTask: $searchTask
                 )
             )
             .toolbar(id: "main-toolbar") {
@@ -194,6 +196,7 @@ private struct SkillSplitLifecycleModifier: ViewModifier {
 
     @Binding var source: SkillSource
     @Binding var searchText: String
+    @Binding var searchTask: Task<Void, Never>?
 
     func body(content: Content) -> some View {
         content
@@ -210,13 +213,20 @@ private struct SkillSplitLifecycleModifier: ViewModifier {
             .onChange(of: source) { _, newValue in
                 if newValue == .local {
                     Task { await store.loadSelectedSkill() }
+                    searchTask?.cancel()
+                    searchTask = nil
                 } else {
                     Task { await remoteStore.loadLatest() }
                 }
             }
             .onChange(of: searchText) { _, newValue in
                 guard source == .clawdhub else { return }
-                Task { await remoteStore.search(query: newValue) }
+                searchTask?.cancel()
+                searchTask = Task {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    guard !Task.isCancelled else { return }
+                    await remoteStore.search(query: newValue)
+                }
             }
     }
 }

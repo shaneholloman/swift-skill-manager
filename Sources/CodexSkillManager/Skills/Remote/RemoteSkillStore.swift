@@ -24,8 +24,11 @@ import Observation
     var selectedSkillID: RemoteSkill.ID?
     var detailMarkdown: String = ""
     var detailState: DetailState = .idle
+    var detailOwner: RemoteSkillOwner?
 
     private let apiClient: RemoteSkillClient
+    private var activeSearchToken = 0
+    private var activeSearchQuery = ""
 
     init(client: RemoteSkillClient) {
         self.apiClient = client
@@ -51,6 +54,9 @@ import Observation
 
     func search(query: String, limit: Int = 20) async {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        activeSearchQuery = trimmed
+        activeSearchToken += 1
+        let token = activeSearchToken
         guard !trimmed.isEmpty else {
             searchResults = []
             searchState = .idle
@@ -59,9 +65,14 @@ import Observation
 
         searchState = .loading
         do {
-            searchResults = try await apiClient.search(trimmed, limit)
+            let results = try await apiClient.search(trimmed, limit)
+            guard token == activeSearchToken, activeSearchQuery == trimmed else {
+                return
+            }
+            searchResults = results
             searchState = .loaded
         } catch {
+            guard token == activeSearchToken else { return }
             searchState = .failed(error.localizedDescription)
         }
     }
@@ -70,12 +81,16 @@ import Observation
         guard let skill = selectedSkill else {
             detailState = .idle
             detailMarkdown = ""
+            detailOwner = nil
             return
         }
 
         detailState = .loading
+        detailOwner = nil
 
         do {
+            detailOwner = try await apiClient.fetchDetail(skill.slug)
+
             let zipURL = try await apiClient.download(skill.slug, skill.latestVersion)
             let fileManager = FileManager.default
             let tempRoot = fileManager.temporaryDirectory

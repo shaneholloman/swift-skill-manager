@@ -42,14 +42,13 @@ struct SkillListView: View {
                     )
                 }
             } else {
-                Section {
-                    Color.clear.frame(height: 0)
-                } header: {
-                    SidebarHeaderView(
-                        skillCount: remoteLatestSkills.count,
-                        source: $source
-                    )
-                }
+                SidebarHeaderView(
+                    skillCount: remoteLatestSkills.count,
+                    source: $source
+                )
+                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 8, trailing: 0))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
 
                 if shouldShowSearchSection {
                     Section("Search Results") {
