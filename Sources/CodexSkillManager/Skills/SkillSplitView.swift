@@ -113,13 +113,7 @@ struct SkillSplitView: View {
         }
 
         ToolbarItem(id: "open") {
-            Button {
-                openSelectedSkillFolder()
-            } label: {
-                Label("Open Skill Folder", systemImage: "folder")
-            }
-            .labelStyle(.iconOnly)
-            .disabled(source != .local)
+            openFolderItem
         }
 
         ToolbarSpacer(.fixed)
@@ -168,11 +162,52 @@ struct SkillSplitView: View {
         }
     }
 
-    private func openSelectedSkillFolder() {
+    @ViewBuilder
+    private var openFolderItem: some View {
+        if shouldShowOpenFolderMenu {
+            Menu {
+                ForEach(SkillPlatform.allCases) { platform in
+                    if installedPlatformsForSelected.contains(platform) {
+                        Button("Open \(platform.rawValue) Folder") {
+                            openSelectedSkillFolder(platform: platform)
+                        }
+                    }
+                }
+            } label: {
+                Label("Open Skill Folder", systemImage: "folder")
+            }
+            .labelStyle(.iconOnly)
+            .disabled(source != .local)
+        } else {
+            Button {
+                openSelectedSkillFolder(platform: nil)
+            } label: {
+                Label("Open Skill Folder", systemImage: "folder")
+            }
+            .labelStyle(.iconOnly)
+            .disabled(source != .local)
+        }
+    }
+
+    private var shouldShowOpenFolderMenu: Bool {
+        installedPlatformsForSelected.count > 1
+    }
+
+    private var installedPlatformsForSelected: Set<SkillPlatform> {
+        guard source == .local, let slug = store.selectedSkill?.name else { return [] }
+        return store.installedPlatforms(for: slug)
+    }
+
+    private func openSelectedSkillFolder(platform: SkillPlatform?) {
         guard source == .local else { return }
-        let url = store.selectedSkill?.folderURL
-            ?? FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent(".codex/skills/public")
+        let url: URL
+        if let platform, let slug = store.selectedSkill?.name {
+            url = platform.rootURL.appendingPathComponent(slug)
+        } else {
+            url = store.selectedSkill?.folderURL
+                ?? FileManager.default.homeDirectoryForCurrentUser
+                    .appendingPathComponent(".codex/skills/public")
+        }
         NSWorkspace.shared.open(url)
     }
 

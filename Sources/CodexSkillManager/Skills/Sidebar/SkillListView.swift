@@ -15,40 +15,8 @@ struct SkillListView: View {
     @Binding var localSelection: Skill.ID?
     @Binding var remoteSelection: RemoteSkill.ID?
 
-    private struct LocalSkillGroup: Identifiable {
-        let id: Skill.ID
-        let skill: Skill
-        let installedPlatforms: Set<SkillPlatform>
-        let deleteIDs: [Skill.ID]
-    }
-
-    private var groupedLocalSkills: [LocalSkillGroup] {
-        let grouped = Dictionary(grouping: localSkills, by: { $0.name })
-        let preferredPlatformOrder: [SkillPlatform] = [.codex, .claude]
-
-        return grouped.compactMap { slug, filteredSkills in
-            let allSkillsForSlug = store.skills.filter { $0.name == slug }
-
-            guard let preferredSelection = preferredPlatformOrder
-                .compactMap({ platform in allSkillsForSlug.first(where: { $0.platform == platform }) })
-                .first ?? allSkillsForSlug.first else {
-                return nil
-            }
-
-            let preferredContent = preferredPlatformOrder
-                .compactMap({ platform in filteredSkills.first(where: { $0.platform == platform }) })
-                .first ?? filteredSkills.first ?? preferredSelection
-
-            return LocalSkillGroup(
-                id: preferredSelection.id,
-                skill: preferredContent,
-                installedPlatforms: Set(allSkillsForSlug.map(\.platform)),
-                deleteIDs: allSkillsForSlug.map(\.id)
-            )
-        }
-        .sorted { lhs, rhs in
-            lhs.skill.displayName.localizedCaseInsensitiveCompare(rhs.skill.displayName) == .orderedAscending
-        }
+    private var groupedLocalSkills: [SkillStore.LocalSkillGroup] {
+        store.groupedLocalSkills(from: localSkills)
     }
 
     var body: some View {
@@ -156,7 +124,7 @@ struct SkillListView: View {
     }
 
     @ViewBuilder
-    private func localSectionContent(_ skills: [LocalSkillGroup]) -> some View {
+    private func localSectionContent(_ skills: [SkillStore.LocalSkillGroup]) -> some View {
         if skills.isEmpty {
             Text("No skills yet.")
                 .foregroundStyle(.secondary)

@@ -18,6 +18,13 @@ import Observation
         case failed(String)
     }
 
+    struct LocalSkillGroup: Identifiable {
+        let id: Skill.ID
+        let skill: Skill
+        let installedPlatforms: Set<SkillPlatform>
+        let deleteIDs: [Skill.ID]
+    }
+
     var skills: [Skill] = []
     var listState: ListState = .idle
     var detailState: DetailState = .idle
@@ -134,6 +141,35 @@ import Observation
 
     func installedPlatforms(for slug: String) -> Set<SkillPlatform> {
         Set(skills.filter { $0.name == slug }.map(\.platform))
+    }
+
+    func groupedLocalSkills(from filteredSkills: [Skill]) -> [LocalSkillGroup] {
+        let grouped = Dictionary(grouping: filteredSkills, by: { $0.name })
+        let preferredPlatformOrder: [SkillPlatform] = [.codex, .claude]
+
+        return grouped.compactMap { slug, filteredSkills in
+            let allSkillsForSlug = skills.filter { $0.name == slug }
+
+            guard let preferredSelection = preferredPlatformOrder
+                .compactMap({ platform in allSkillsForSlug.first(where: { $0.platform == platform }) })
+                .first ?? allSkillsForSlug.first else {
+                return nil
+            }
+
+            let preferredContent = preferredPlatformOrder
+                .compactMap({ platform in filteredSkills.first(where: { $0.platform == platform }) })
+                .first ?? filteredSkills.first ?? preferredSelection
+
+            return LocalSkillGroup(
+                id: preferredSelection.id,
+                skill: preferredContent,
+                installedPlatforms: Set(allSkillsForSlug.map(\.platform)),
+                deleteIDs: allSkillsForSlug.map(\.id)
+            )
+        }
+        .sorted { lhs, rhs in
+            lhs.skill.displayName.localizedCaseInsensitiveCompare(rhs.skill.displayName) == .orderedAscending
+        }
     }
 
     private func normalizeSelectionToPreferredPlatform() {

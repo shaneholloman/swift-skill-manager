@@ -26,7 +26,7 @@ struct SkillRowView: View {
             HStack(spacing: 6) {
                 ForEach(SkillPlatform.allCases) { platform in
                     if installedPlatforms.contains(platform) {
-                        TagView(text: platform.rawValue, tint: .green)
+                        TagView(text: platform.rawValue, tint: platform.badgeTint)
                     }
                 }
 

@@ -24,7 +24,7 @@ struct RemoteSkillRowView: View {
 
                 ForEach(SkillPlatform.allCases) { platform in
                     if installedTargets.contains(platform) {
-                        TagView(text: platform.rawValue, tint: .green)
+                        TagView(text: platform.rawValue, tint: platform.badgeTint)
                     }
                 }
             }
