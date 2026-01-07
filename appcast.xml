@@ -5,10 +5,32 @@
         <link>https://raw.githubusercontent.com/Dimillian/CodexSkillManager/main/appcast.xml</link>
         <description>Codex Skill Manager updates</description>
         <item>
+            <title>1.0.0</title>
+            <pubDate>Wed, 07 Jan 2026 21:25:15 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/Dimillian/CodexSkillManager/main/appcast.xml</link>
+            <sparkle:version>3</sparkle:version>
+            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>CodexSkillManager-1.0.0</title>
+<body>
+<h2>CodexSkillManager-1.0.0</h2>
+<ul>
+<li>Major release with polished local skill grouping and platform-aware badges.</li>
+<li>Open button now prompts when a skill exists in both Codex and Claude Code.</li>
+<li>Claude (orange) and Codex (purple) badges updated to the new palette.</li>
+</ul>
+</body>
+</html>]]></description>
+            <enclosure url="https://github.com/Dimillian/CodexSkillManager/releases/download/v1.0.0/CodexSkillManager-1.0.0.zip" length="3338871" type="application/octet-stream" sparkle:edSignature="tnLWSwLNVOXs4+pj1GQ+ZE/rOITTCQ5KVrWCGlnjNQNoPxPEiRU4U4FLXIshdijypgnCMo+ve8jYgwoahVy3AQ=="/>
+        </item>
+        <item>
             <title>0.6.6</title>
             <pubDate>Wed, 07 Jan 2026 20:07:03 +0100</pubDate>
             <link>https://raw.githubusercontent.com/Dimillian/CodexSkillManager/main/appcast.xml</link>
-            <sparkle:version>2</sparkle:version>
+            <sparkle:version>3</sparkle:version>
             <sparkle:shortVersionString>0.6.6</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <description><![CDATA[<!doctype html>
