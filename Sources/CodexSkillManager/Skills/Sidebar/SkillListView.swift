@@ -125,30 +125,43 @@ struct SkillListView: View {
 
     @ViewBuilder
     private func localSectionContent(_ skills: [SkillStore.LocalSkillGroup]) -> some View {
-        if skills.isEmpty {
+        let mine = skills.filter { store.isOwnedSkill($0.skill) }
+        let clawdhub = skills.filter { !store.isOwnedSkill($0.skill) }
+
+        if mine.isEmpty && clawdhub.isEmpty {
             Text("No skills yet.")
                 .foregroundStyle(.secondary)
                 .padding(.vertical, 8)
         } else {
-            ForEach(skills) { skill in
-                SkillRowView(
-                    skill: skill.skill,
-                    installedPlatforms: skill.installedPlatforms
-                )
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            Task { await store.deleteSkills(ids: skill.deleteIDs) }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
+            Section("Mine") {
+                localRows(for: mine)
             }
-            .onDelete { offsets in
-                let ids = offsets
-                    .filter { skills.indices.contains($0) }
-                    .flatMap { skills[$0].deleteIDs }
-                Task { await store.deleteSkills(ids: ids) }
+            Section("Clawdhub") {
+                localRows(for: clawdhub)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func localRows(for skills: [SkillStore.LocalSkillGroup]) -> some View {
+        ForEach(skills) { skill in
+            SkillRowView(
+                skill: skill.skill,
+                installedPlatforms: skill.installedPlatforms
+            )
+            .swipeActions(edge: .trailing) {
+                Button(role: .destructive) {
+                    Task { await store.deleteSkills(ids: skill.deleteIDs) }
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
+        .onDelete { offsets in
+            let ids = offsets
+                .filter { skills.indices.contains($0) }
+                .flatMap { skills[$0].deleteIDs }
+            Task { await store.deleteSkills(ids: ids) }
         }
     }
 }
