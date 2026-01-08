@@ -5,6 +5,26 @@
         <link>https://raw.githubusercontent.com/Dimillian/CodexSkillManager/main/appcast.xml</link>
         <description>Codex Skill Manager updates</description>
         <item>
+            <title>1.2.2</title>
+            <pubDate>Thu, 08 Jan 2026 13:29:25 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/Dimillian/CodexSkillManager/main/appcast.xml</link>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>1.2.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>CodexSkillManager-1.2.2</title>
+<body>
+<h2>CodexSkillManager-1.2.2</h2>
+<ul>
+<li>Fix Sparkle update signing and enforce Sparkle keys during release builds.</li>
+</ul>
+</body>
+</html>]]></description>
+            <enclosure url="https://github.com/Dimillian/CodexSkillManager/releases/download/v1.2.2/CodexSkillManager-1.2.2.zip" length="3598661" type="application/octet-stream" sparkle:edSignature="Zq3pyeJnaKTuFu5mXBvFlDd2hQIzcmvpvKntkAdNc/wNolMb5G1Rw72yjcWiUdDYKGGWTfNLiZMuHDk3EvYsDA=="/>
+        </item>
+        <item>
             <title>1.2.1</title>
             <pubDate>Thu, 08 Jan 2026 13:14:08 +0100</pubDate>
             <link>https://raw.githubusercontent.com/Dimillian/CodexSkillManager/main/appcast.xml</link>
@@ -45,28 +65,6 @@
 </body>
 </html>]]></description>
             <enclosure url="https://github.com/Dimillian/CodexSkillManager/releases/download/v1.2.0/CodexSkillManager-1.2.0.zip" length="3558440" type="application/octet-stream"/>
-        </item>
-        <item>
-            <title>1.1.0</title>
-            <pubDate>Thu, 08 Jan 2026 10:07:43 +0100</pubDate>
-            <link>https://raw.githubusercontent.com/Dimillian/CodexSkillManager/main/appcast.xml</link>
-            <sparkle:version>4</sparkle:version>
-            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<!doctype html>
-<html lang="en">
-<meta charset="utf-8">
-<title>CodexSkillManager-1.1.0</title>
-<body>
-<h2>CodexSkillManager-1.1.0</h2>
-<ul>
-<li>Add Clawdhub publish workflow with version bumping and publish state tracking.</li>
-<li>Show current published version from Clawdhub before publishing.</li>
-<li>Improve publish UI with clearer loading and login flow.</li>
-</ul>
-</body>
-</html>]]></description>
-            <enclosure url="https://github.com/Dimillian/CodexSkillManager/releases/download/v1.1.0/CodexSkillManager-1.1.0.zip" length="3511590" type="application/octet-stream"/>
         </item>
     </channel>
 </rss>
