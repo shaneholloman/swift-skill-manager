@@ -14,6 +14,7 @@ import Observation
         case idle
         case loading
         case loaded
+        case cachedRefreshing
         case failed(String)
     }
 
@@ -28,6 +29,7 @@ import Observation
 
     private let apiClient: RemoteSkillClient
     private let fileWorker = SkillFileWorker()
+    private let detailCache = RemoteSkillDetailCache.shared
     private var activeSearchToken = 0
     private var activeSearchQuery = ""
 
@@ -86,18 +88,45 @@ import Observation
             return
         }
 
-        detailState = .loading
-        detailOwner = nil
+        // Check NSCache first (application-level cache)
+        if let cached = detailCache.get(slug: skill.slug, version: skill.latestVersion) {
+            detailMarkdown = cached.markdown
+            detailOwner = cached.owner
+            detailState = .cachedRefreshing
+        } else {
+            detailState = .loading
+            detailMarkdown = ""
+            detailOwner = nil
+        }
 
+        // Fetch from network (URLCache may provide HTTP-level caching)
         do {
-            detailOwner = try await apiClient.fetchDetail(skill.slug)
+            let owner = try await apiClient.fetchDetail(skill.slug)
             let zipURL = try await apiClient.download(skill.slug, skill.latestVersion)
-            let markdown = try await fileWorker.loadRawMarkdown(from: zipURL)
-            detailMarkdown = stripFrontmatter(from: markdown)
+            let markdown = stripFrontmatter(from: try await fileWorker.loadRawMarkdown(from: zipURL))
+
+            guard skill.id == selectedSkillID else { return }
+
+            // Update NSCache with fresh data
+            detailCache.set(
+                CachedSkillDetail(markdown: markdown, owner: owner),
+                slug: skill.slug,
+                version: skill.latestVersion
+            )
+
+            detailOwner = owner
+            detailMarkdown = markdown
             detailState = .loaded
         } catch {
-            detailState = .failed(error.localizedDescription)
-            detailMarkdown = ""
+            guard skill.id == selectedSkillID else { return }
+
+            // If we had cached content, silently keep showing it
+            if detailState == .cachedRefreshing {
+                detailState = .loaded
+            } else {
+                detailState = .failed(error.localizedDescription)
+                detailMarkdown = ""
+            }
         }
     }
 

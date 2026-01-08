@@ -9,8 +9,20 @@ struct RemoteSkillClient {
 }
 
 extension RemoteSkillClient {
+    // Static URLSession configured with URLCache (10MB memory, 50MB disk)
+    // Shared across all client instances for efficiency
+    private static let session: URLSession = {
+        let urlCache = URLCache(
+            memoryCapacity: 10 * 1024 * 1024,
+            diskCapacity: 50 * 1024 * 1024
+        )
+        let config = URLSessionConfiguration.default
+        config.urlCache = urlCache
+        return URLSession(configuration: config)
+    }()
+
     static func live(baseURL: URL = URL(string: "https://clawdhub.com")!) -> RemoteSkillClient {
-        let session = URLSession.shared
+        let session = Self.session
 
         return RemoteSkillClient(
             fetchLatest: { limit in

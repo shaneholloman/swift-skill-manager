@@ -338,8 +338,6 @@ private struct SkillSplitLifecycleModifier: ViewModifier {
                     Task { await store.loadSelectedSkill() }
                     searchTask?.cancel()
                     searchTask = nil
-                } else {
-                    Task { await remoteStore.loadLatest() }
                 }
             }
             .onChange(of: searchText) { _, newValue in

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SkillListView: View {
     @Environment(SkillStore.self) private var store
+    @Environment(RemoteSkillStore.self) private var remoteStore
 
     let localSkills: [Skill]
     let remoteLatestSkills: [RemoteSkill]
@@ -55,12 +56,18 @@ struct SkillListView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    Task { await store.loadSkills() }
+                    Task {
+                        switch source {
+                        case .local:
+                            await store.loadSkills()
+                        case .clawdhub:
+                            await remoteStore.loadLatest()
+                        }
+                    }
                 } label: {
                     Label("Reload", systemImage: "arrow.clockwise")
                 }
                 .labelStyle(.iconOnly)
-                .disabled(source != .local)
             }
         }
     }

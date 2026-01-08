@@ -12,7 +12,7 @@ struct RemoteSkillDetailView: View {
                     loadingView(for: skill)
                 case .failed(let message):
                     errorView(for: skill, message: message)
-                case .loaded:
+                case .loaded, .cachedRefreshing:
                     markdownView(for: skill)
                 }
             }
