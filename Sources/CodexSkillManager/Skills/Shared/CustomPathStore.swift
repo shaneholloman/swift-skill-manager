@@ -4,7 +4,6 @@ import Observation
 enum CustomPathError: LocalizedError {
     case directoryNotFound
     case duplicatePath
-    case noSkillsFound
 
     var errorDescription: String? {
         switch self {
@@ -12,8 +11,6 @@ enum CustomPathError: LocalizedError {
             return "The selected directory does not exist."
         case .duplicatePath:
             return "This path has already been added."
-        case .noSkillsFound:
-            return "No skills found in the selected directory."
         }
     }
 }

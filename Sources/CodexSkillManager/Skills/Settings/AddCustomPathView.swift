@@ -62,7 +62,7 @@ struct AddCustomPathView: View {
                 Text("Scanning for skills...")
                     .foregroundStyle(.secondary)
             }
-            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let url = selectedURL {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -78,6 +78,7 @@ struct AddCustomPathView: View {
                 systemImage: "folder.badge.plus",
                 description: Text("Choose a folder containing platform skill directories")
             )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
 
         if let error = errorMessage {
@@ -215,15 +216,13 @@ struct AddCustomPathView: View {
                 }
             }
 
-            await MainActor.run {
-                discoveredSkills = discovered
-                if discovered.isEmpty {
-                    errorMessage = "No skills found. Make sure the folder contains platform directories like .claude/skills or .codex/skills/public with SKILL.md files."
-                } else {
-                    errorMessage = nil
-                }
-                isValidating = false
+            discoveredSkills = discovered
+            if discovered.isEmpty {
+                errorMessage = "No skills found. Make sure the folder contains platform directories like .claude/skills or .codex/skills/public with SKILL.md files."
+            } else {
+                errorMessage = nil
             }
+            isValidating = false
         }
     }
 

@@ -46,16 +46,7 @@ enum SkillPlatform: String, CaseIterable, Identifiable, Hashable, Sendable, Coda
     }
 
     var description: String {
-        switch self {
-        case .codex:
-            return "Install in \(rootURL.path)"
-        case .claude:
-            return "Install in \(rootURL.path)"
-        case .opencode:
-            return "Install in \(rootURL.path)"
-        case .copilot:
-            return "Install in \(rootURL.path)"
-        }
+        "Install in \(rootURL.path)"
     }
 
     var badgeTint: Color {

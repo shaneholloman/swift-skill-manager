@@ -166,7 +166,7 @@ struct SkillListView: View {
                         localRows(for: grouped)
                     }
                 } header: {
-                    CustomPathSectionHeader(customPath: customPath, skillCount: grouped.count)
+                    CustomPathSectionHeader(customPath: customPath)
                 }
             }
         }
